@@ -1,0 +1,168 @@
+; ; Conways Game of Life
+.const
+GRAPHIC 32768
+.const
+BANKSWITCH 32767
+.const
+SIZE 20
+.const
+COLOR 3
+.reg
+r_pos
+R0
+.reg
+w_pos
+R1
+.reg
+x
+R2
+.reg
+y
+R3
+.reg
+TEMP
+R4
+.reg
+R_OFFS
+R5
+.reg
+W_OFFS
+R6
+.reg
+COUNT
+R7
+.reg
+VALUE
+R8
+.reg
+BANK
+R9
+.reg
+NEWVAL
+R10
+.reg
+COUNT_RET
+R11
+.reg
+COUNT_R
+R12
+ 22 | 0000: 8000 0961           LDI   R6,GRAPHIC       ; 0x8000
+ 23 | 0002: 8190 0951           LDI   R5,GRAPHIC+(SIZE*SIZE); 0x8190
+ 24 | 0004: 0a90                LDIs  R9,0             ; 0x0
+; ;init screen
+ 27 | 0005: 0a83                LDIs  R8,COLOR         ; 0x3
+; ;	Pulsator
+ 30 | 0006: 0a25                LDIs  R2,5             ; 0x5
+ 31 | 0007: 0a3a                LDIs  R3,10            ; 0xa
+                                ; Macro: CALL set
+ 32 | 0008: 10e1      pul1:       SUBIs SP,1           ; 0x1
+    | 0009: 0afc                  LDIs  RA,_SKIP2_ADDR_; 0xc
+    | 000a: 2bef                  ST    [SP],RA
+    | 000b: 3d5f                  JMPs  set            ; 0x6b
+                                ; Macro: INC R2
+ 33 | 000c: 0c21                  ADDIs R2,1           ; 0x1
+ 34 | 000d: 212f                CPIs  R2,15            ; 0xf
+ 35 | 000e: 38f9                BRNE  pul1             ; 0x8
+; ; start programm
+ 38 | 000f: 3d20                JMPs  SWAP_PAGE        ; 0x30
+; ; calculate new generation
+ 41 | 0010: 0105      START:    MOV   R0,R5
+ 42 | 0011: 0116                MOV   R1,R6
+ 43 | 0012: 0a30                LDIs  R3,0             ; 0x0
+ 44 | 0013: 0a20      L_Y:      LDIs  R2,0             ; 0x0
+ 45 | 0014: 0aa0      L_X:      LDIs  R10,0            ; 0x0
+ 46 | 0015: 8035 3ac0           RCALL R12,count        ; 0x35
+ 47 | 0017: 4380                INR   R8,[R0]
+ 48 | 0018: 2180                CPIs  R8,0             ; 0x0
+ 49 | 0019: 3505                BREQ  isDead           ; 0x1f
+ 51 | 001a: 2172      isAlive:  CPIs  R7,2             ; 0x2
+ 52 | 001b: 3505                BREQ  wake             ; 0x21
+ 53 | 001c: 2173                CPIs  R7,3             ; 0x3
+ 54 | 001d: 3503                BREQ  wake             ; 0x21
+ 55 | 001e: 3d03                JMPs  loopEnd          ; 0x22
+ 57 | 001f: 2173      isDead:   CPIs  R7,3             ; 0x3
+ 58 | 0020: 3801                BRNE  loopEnd          ; 0x22
+ 59 | 0021: 0aa3      wake:     LDIs  R10,COLOR        ; 0x3
+ 62 | 0022: 401a      loopEnd:  OUTR  [R1],R10
+                                ; Macro: INC R0
+ 63 | 0023: 0c01                  ADDIs R0,1           ; 0x1
+                                ; Macro: INC R1
+ 64 | 0024: 0c11                  ADDIs R1,1           ; 0x1
+                                ; Macro: INC R2
+ 65 | 0025: 0c21                  ADDIs R2,1           ; 0x1
+ 66 | 0026: 8014 2020           CPI   R2,SIZE          ; 0x14
+ 67 | 0028: 38eb                BRNE  L_X              ; 0x14
+                                ; Macro: INC R3
+ 68 | 0029: 0c31                  ADDIs R3,1           ; 0x1
+ 69 | 002a: 8014 2030           CPI   R3,SIZE          ; 0x14
+ 70 | 002c: 38e6                BRNE  L_Y              ; 0x13
+; ; make the new generation visible
+ 73 | 002d: 1991                EORIs R9,1             ; 0x1
+ 74 | 002e: ffff 3e09           OUT   BANKSWITCH,R9    ; 0x7fff
+; ; swap page to read and page to write
+                      SWAP_PAGE:
+ 78 | 0030: 0146                MOV   R4,R6
+ 79 | 0031: 0165                MOV   R6,R5
+ 80 | 0032: 0154                MOV   R5,R4
+ 82 | 0033: 4400                BRK   
+ 83 | 0034: 3ddb                JMPs  START            ; 0x10
+ 86 | 0035: 0a70      count:    LDIs  R7,0             ; 0x0
+                                ; Macro: DEC R3
+ 87 | 0036: 1031                  SUBIs R3,1           ; 0x1
+ 88 | 0037: 8014 0f00           SUBI  R0,SIZE          ; 0x14
+ 89 | 0039: 8060 3ab0           RCALL R11,count_check  ; 0x60
+                                ; Macro: INC R2
+ 90 | 003b: 0c21                  ADDIs R2,1           ; 0x1
+ 91 | 003c: 0c01                ADDIs R0,1             ; 0x1
+ 92 | 003d: 8060 3ab0           RCALL R11,count_check  ; 0x60
+                                ; Macro: INC R3
+ 93 | 003f: 0c31                  ADDIs R3,1           ; 0x1
+ 94 | 0040: 8014 0b00           ADDI  R0,SIZE          ; 0x14
+ 95 | 0042: 8060 3ab0           RCALL R11,count_check  ; 0x60
+                                ; Macro: INC R3
+ 96 | 0044: 0c31                  ADDIs R3,1           ; 0x1
+ 97 | 0045: 8014 0b00           ADDI  R0,SIZE          ; 0x14
+ 98 | 0047: 8060 3ab0           RCALL R11,count_check  ; 0x60
+                                ; Macro: DEC R2
+ 99 | 0049: 1021                  SUBIs R2,1           ; 0x1
+100 | 004a: 1001                SUBIs R0,1             ; 0x1
+101 | 004b: 8060 3ab0           RCALL R11,count_check  ; 0x60
+                                ; Macro: DEC R2
+102 | 004d: 1021                  SUBIs R2,1           ; 0x1
+103 | 004e: 1001                SUBIs R0,1             ; 0x1
+104 | 004f: 8060 3ab0           RCALL R11,count_check  ; 0x60
+                                ; Macro: DEC R3
+105 | 0051: 1031                  SUBIs R3,1           ; 0x1
+106 | 0052: 8014 0f00           SUBI  R0,SIZE          ; 0x14
+107 | 0054: 8060 3ab0           RCALL R11,count_check  ; 0x60
+                                ; Macro: DEC R3
+108 | 0056: 1031                  SUBIs R3,1           ; 0x1
+109 | 0057: 8014 0f00           SUBI  R0,SIZE          ; 0x14
+110 | 0059: 8060 3ab0           RCALL R11,count_check  ; 0x60
+                                ; Macro: INC R2
+111 | 005b: 0c21                  ADDIs R2,1           ; 0x1
+                                ; Macro: INC R3
+112 | 005c: 0c31                  ADDIs R3,1           ; 0x1
+113 | 005d: 8015 0b00           ADDI  R0,SIZE+1        ; 0x15
+114 | 005f: 3b0c                RRET  R12
+; ; if running pulsator, border check is not necessary
+                      count_check:
+116 | 0060: 8014 2020           CPI   R2,SIZE          ; 0x14
+117 | 0062: 3707                BRCC  c1               ; 0x6a
+118 | 0063: 8014 2030           CPI   R3,SIZE          ; 0x14
+119 | 0065: 3704                BRCC  c1               ; 0x6a
+120 | 0066: 4380                INR   R8,[R0]
+121 | 0067: 2180                CPIs  R8,0             ; 0x0
+122 | 0068: 3501                BREQ  c1               ; 0x6a
+                                ; Macro: INC R7
+123 | 0069: 0c71                  ADDIs R7,1           ; 0x1
+124 | 006a: 3b0b      c1:       RRET  R11
+127 | 006b: 0143      set:      MOV   R4,R3
+128 | 006c: 8014 1c40           MULI  R4,SIZE          ; 0x14
+129 | 006e: 0242                ADD   R4,R2
+130 | 006f: 0246                ADD   R4,R6
+131 | 0070: 4048                OUTR  [R4],R8
+                                ; Macro: RET
+132 | 0071: 2cfe                  LD    RA,[SP]
+    | 0072: 0ce1                  ADDIs SP,1           ; 0x1
+    | 0073: 3b0f                  RRET  RA
